@@ -127,10 +127,39 @@
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp; tg.expand(); marked.use({ breaks: true, gfm: true });
+        const tg = window.Telegram.WebApp;
+        tg.expand(); 
+        marked.use({ breaks: true, gfm: true });
+
+        // --- Глобальная функция отправки (ЧТОБЫ НЕ ТЕРЯЛАСЬ) ---
+        function sendSessionCommand(chatName) {
+            // Визуальный отклик
+            const btn = document.getElementById('btn-load-session');
+            if(btn) { btn.innerHTML = "⏳ Отправка..."; btn.style.opacity = "0.7"; }
+
+            try {
+                // Формируем данные
+                const payload = JSON.stringify({
+                    action: 'load_session',
+                    name: chatName
+                });
+                
+                // Отправляем
+                tg.sendData(payload);
+                
+                // ⚠️ ВАЖНО: Даем Телеграму 0.3 сек, чтобы реально отправить данные перед закрытием
+                setTimeout(function() {
+                    tg.close();
+                }, 300);
+                
+            } catch (e) {
+                tg.showAlert("Ошибка JS: " + e.message);
+            }
+        }
 
         function renderContent(text, elId='answer-content') {
-            const da = document.getElementById(elId); const mb = [];
+            const da = document.getElementById(elId);
+            const mb = [];
             let pt = text.replace(/\$\$([\s\S]*?)\$\$/g, m=>{mb.push(m);return '%%%B'+(mb.length-1)+'%%%'});
             pt = pt.replace(/\$([\s\S]*?)\$/g, m=>{mb.push(m);return '%%%I'+(mb.length-1)+'%%%'});
             let html = marked.parse(pt);
@@ -139,9 +168,17 @@
             renderMathInElement(da, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});
         }
 
-        function insertFormula() { const mf = document.getElementById('math-input'), ta = document.getElementById('main-text'); if(!mf.value) return; const tag=" $"+mf.value+"$ ", s=ta.selectionStart; ta.value=ta.value.slice(0,s)+tag+ta.value.slice(ta.selectionEnd); ta.focus(); ta.selectionStart=s+tag.length; mf.setValue(""); }
-        function sendData() { const t=document.getElementById('main-text').value; if(!t.trim()) return tg.showPopup({message:'Пусто!'}); tg.sendData(JSON.stringify({full_text:t})); }
+        function insertFormula() { const mf = document.getElementById('math-input'), ta = document.getElementById('main-text'); if(!mf.value) return;
+            const tag=" $"+mf.value+"$ ", s=ta.selectionStart; ta.value=ta.value.slice(0,s)+tag+ta.value.slice(ta.selectionEnd); ta.focus(); ta.selectionStart=s+tag.length; mf.setValue(""); }
+        
+        function sendData() { 
+            const t=document.getElementById('main-text').value;
+            if(!t.trim()) return tg.showPopup({message:'Пусто!'}); 
+            // Обычная отправка текста
+            tg.sendData(JSON.stringify({full_text:t})); 
+        }
 
+        // --- ЛОГИКА ЗАГРУЗКИ ---
         const params = new URLSearchParams(window.location.search);
         const adminId = params.get('adminBinId'), dataId = params.get('binId'), direct = params.get('data');
 
@@ -149,15 +186,24 @@
             document.getElementById('input-mode').classList.add('hidden');
             document.getElementById('admin-mode').style.display = 'flex';
             
-            // Убрал заголовки, чтобы не было CORS ошибки
             fetch(`https://api.jsonbin.io/v3/b/${adminId}/latest`)
             .then(r=>r.json())
             .then(json => {
-                const db = json.record || json; 
-                document.getElementById('loading-admin').classList.add('hidden');
-                document.getElementById('users-container').classList.remove('hidden');
-                document.getElementById('chat-container').classList.remove('hidden');
-                renderUserList(db);
+                // Поддержка и старого формата (прямой объект) и нового (record)
+                let db = json.record || json;
+                // Если пришел формат одного юзера { "123": {...} }, берем внутрь
+                const keys = Object.keys(db).filter(k => k!=='metadata');
+                if(keys.length === 1 && typeof db[keys[0]] === 'object' && db[keys[0]].history) {
+                     // Это режим "Мои чаты" (один юзер)
+                     const uid = keys[0];
+                     renderSessions(db[uid]); // Сразу рисуем сессии этого юзера
+                } else {
+                     // Это режим Админа (много юзеров)
+                     document.getElementById('loading-admin').classList.add('hidden');
+                     document.getElementById('users-container').classList.remove('hidden');
+                     document.getElementById('chat-container').classList.remove('hidden');
+                     renderUserList(db);
+                }
             })
             .catch(e => document.getElementById('loading-admin').innerHTML = "Ошибка загрузки: "+e);
 
@@ -171,58 +217,37 @@
             });
         }
 
-        let currentUserData = null; // Глобальная переменная для текущего юзера
-
+        // --- РЕНДЕР СПИСКОВ ---
+        
         function renderUserList(db) {
             const c = document.getElementById('users-container');
             c.innerHTML = "";
-            // Фильтруем служебные поля JSONBin
             const userIds = Object.keys(db).filter(k => k !== 'metadata' && k !== 'record' && typeof db[k] === 'object');
             
             if(userIds.length === 0) return c.innerHTML = "<div style='padding:10px'>Пусто</div>";
 
             userIds.forEach(uid => {
-                const u = db[uid]; 
-                const card = document.createElement('div'); 
-                card.className = 'user-card';
-                
-                // Имя пользователя
+                const u = db[uid]; const card = document.createElement('div'); card.className = 'user-card';
                 const name = u.name || 'User ' + uid;
-                // Подсчет количества сохраненных чатов для красоты
-                const savedCount = u.saved_chats ? Object.keys(u.saved_chats).length : 0;
-                
-                card.innerHTML = `
-                    <span class="user-name">${name}</span>
-                    <span class="user-id">ID: ${uid}</span>
-                    ${savedCount > 0 ? `<span style="font-size:10px; color:green">📚 ${savedCount} шт.</span>` : ''}
-                `;
-                
+                card.innerHTML = `<span class="user-name">${name}</span><span class="user-id">${uid}</span>`;
                 card.onclick = () => { 
-                    // Подсветка активного пользователя
-                    document.querySelectorAll('.user-card').forEach(x=>x.classList.remove('active')); 
-                    card.classList.add('active'); 
-                    
-                    // 🆕 Запуск рендера сессий
-                    currentUserData = u;
-                    renderSessions(u);
+                    document.querySelectorAll('.user-card').forEach(x=>x.classList.remove('active')); card.classList.add('active'); 
+                    renderSessions(u); 
                 };
                 c.appendChild(card);
             });
         }
 
-        // 🆕 Функция отображения кнопок сессий
         function renderSessions(u) {
             const sc = document.getElementById('sessions-container');
             sc.innerHTML = "";
             sc.classList.remove('hidden');
             
-            // Функция для создания кнопок-чипов
             const createChip = (text, isCurrent, onClick) => {
                 const chip = document.createElement('div');
                 chip.className = 'chip' + (isCurrent ? ' active' : '');
                 chip.innerText = text;
                 chip.onclick = function() {
-                    // Снимаем активность со всех
                     document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
                     this.classList.add('active');
                     onClick();
@@ -230,65 +255,35 @@
                 sc.appendChild(chip);
             };
 
-            // 1. Чип текущего чата
+            // Чип текущего
             createChip("⚡️ Текущий", true, () => {
-                removeLoadButton(); // Убираем кнопку загрузки (текущий и так загружен)
+                removeLoadButton();
                 renderChat(u.history || []);
             });
 
-            // 2. Чипы сохраненных чатов
+            // Чипы сохраненных
             if (u.saved_chats) {
                 Object.keys(u.saved_chats).forEach(chatName => {
                     createChip("📄 " + chatName, false, () => {
-                        // Рендерим историю
                         renderChat(u.saved_chats[chatName]);
-                        // 🆕 ПОКАЗЫВАЕМ КНОПКУ ИМПОРТА
                         showLoadButton(chatName);
                     });
                 });
             }
-            
-            // Сразу рендерим текущий
             renderChat(u.history || []);
         }
 
-        // 🆕 Функция создания кнопки "Загрузить"
-        // 🆕 Исправленная функция кнопки загрузки
         function showLoadButton(chatName) {
-            removeLoadButton(); // Удаляем старую, если была
-            
+            removeLoadButton();
             const btn = document.createElement('button');
             btn.className = 'load-chat-btn';
             btn.id = 'btn-load-session';
-            btn.innerHTML = `📥 Загрузить чат «${chatName}»`;
+            // Используем textContent для безопасности
+            btn.textContent = `📥 Загрузить чат «${chatName}»`;
             
-            // ВАЖНОЕ ИЗМЕНЕНИЕ: Обработчик клика
-            btn.onclick = function() {
-                // 1. Визуальный эффект нажатия
-                btn.innerHTML = "⏳ Загружаю...";
-                btn.style.opacity = "0.7";
-                
-                try {
-                    // 2. Формируем данные
-                    const payload = JSON.stringify({
-                        action: 'load_session',
-                        name: chatName
-                    });
-                    
-                    // 3. Отправляем в бота
-                    tg.sendData(payload);
-                    
-                    // 4. ПРИНУДИТЕЛЬНО закрываем окно (Telegram иногда тупит и не закрывает сам)
-                    setTimeout(function() {
-                        tg.close();
-                    }, 50);
-                    
-                } catch (e) {
-                    tg.showAlert("Ошибка JS: " + e.message);
-                }
-            };
+            // Вызываем глобальную функцию отправки
+            btn.onclick = function() { sendSessionCommand(chatName); };
             
-            // Добавляем кнопку в контейнер админки
             document.getElementById('admin-mode').appendChild(btn);
         }
 
@@ -297,13 +292,9 @@
             if(existing) existing.remove();
         }
 
-        function setActiveChip(el) {
-            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-            el.classList.add('active');
-        }
-
         function renderChat(h) {
-            const d = document.getElementById('chat-container'); d.innerHTML = "";
+            const d = document.getElementById('chat-container');
+            d.innerHTML = "";
             if(!h || h.length===0) return d.innerHTML="<div style='text-align:center;margin-top:20px'>История пуста</div>";
             h.forEach(m => {
                 const b = document.createElement('div'); b.className = `msg ${m.role}`;
@@ -316,6 +307,7 @@
     </script>
 </body>
 </html>
+
 
 
 
