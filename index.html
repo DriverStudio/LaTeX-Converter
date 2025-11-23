@@ -33,6 +33,20 @@
         .msg.assistant { align-self: flex-start; background: var(--tg-theme-secondary-bg-color, #e0e0e0); color: var(--tg-theme-text-color, #000); }
         .hidden { display: none !important; }
         .query-quote { border-left: 3px solid #ccc; padding-left: 10px; margin-bottom: 10px; opacity: 0.7; font-size: 0.9em; }
+        /* 🆕 Стили для переключателя чатов */
+        .session-bar {
+            display: flex; gap: 8px; overflow-x: auto; padding: 10px; 
+            background: rgba(0,0,0,0.05); border-bottom: 1px solid #ccc;
+            white-space: nowrap; -webkit-overflow-scrolling: touch;
+        }
+        .chip {
+            padding: 6px 12px; border-radius: 20px; font-size: 13px; cursor: pointer;
+            background: #fff; border: 1px solid #ccc; color: #333; transition: 0.2s;
+        }
+        .chip.active {
+            background: var(--tg-theme-button-color, #3390ec); color: white; border-color: transparent;
+        }
+        .chip:hover { opacity: 0.8; }
     </style>
 </head>
 <body> 
@@ -57,8 +71,14 @@
     <div id="admin-mode">
         <h3>👑 Dashboard</h3>
         <div id="loading-admin">Загрузка...</div>
+        
         <div id="users-container" class="user-list hidden"></div>
-        <div id="chat-container" class="chat-viewer hidden"><div style="text-align: center; opacity: 0.5; margin-top: 20px;">Выберите чат</div></div>
+        
+        <div id="sessions-container" class="session-bar hidden"></div>
+
+        <div id="chat-container" class="chat-viewer hidden">
+            <div style="text-align: center; opacity: 0.5; margin-top: 20px;">Выберите пользователя</div>
+        </div>
     </div>
 
     <script>
@@ -106,18 +126,82 @@
             });
         }
 
+        let currentUserData = null; // Глобальная переменная для текущего юзера
+
         function renderUserList(db) {
-            const c = document.getElementById('users-container'); c.innerHTML = "";
+            const c = document.getElementById('users-container');
+            c.innerHTML = "";
+            // Фильтруем служебные поля JSONBin
             const userIds = Object.keys(db).filter(k => k !== 'metadata' && k !== 'record' && typeof db[k] === 'object');
+            
             if(userIds.length === 0) return c.innerHTML = "<div style='padding:10px'>Пусто</div>";
 
             userIds.forEach(uid => {
-                const u = db[uid]; const card = document.createElement('div'); card.className = 'user-card';
+                const u = db[uid]; 
+                const card = document.createElement('div'); 
+                card.className = 'user-card';
+                
+                // Имя пользователя
                 const name = u.name || 'User ' + uid;
-                card.innerHTML = `<span class="user-name">${name}</span><span class="user-id">${uid}</span>`;
-                card.onclick = () => { document.querySelectorAll('.user-card').forEach(x=>x.classList.remove('active')); card.classList.add('active'); renderChat(u.history || []); };
+                // Подсчет количества сохраненных чатов для красоты
+                const savedCount = u.saved_chats ? Object.keys(u.saved_chats).length : 0;
+                
+                card.innerHTML = `
+                    <span class="user-name">${name}</span>
+                    <span class="user-id">ID: ${uid}</span>
+                    ${savedCount > 0 ? `<span style="font-size:10px; color:green">📚 ${savedCount} шт.</span>` : ''}
+                `;
+                
+                card.onclick = () => { 
+                    // Подсветка активного пользователя
+                    document.querySelectorAll('.user-card').forEach(x=>x.classList.remove('active')); 
+                    card.classList.add('active'); 
+                    
+                    // 🆕 Запуск рендера сессий
+                    currentUserData = u;
+                    renderSessions(u);
+                };
                 c.appendChild(card);
             });
+        }
+
+        // 🆕 Функция отображения кнопок сессий
+        function renderSessions(u) {
+            const sc = document.getElementById('sessions-container');
+            sc.innerHTML = "";
+            sc.classList.remove('hidden');
+
+            // 1. Кнопка "Текущий чат" (всегда первая)
+            const currentChip = document.createElement('div');
+            currentChip.className = 'chip active'; // По умолчанию активна
+            currentChip.innerText = "⚡️ Текущий";
+            currentChip.onclick = function() {
+                setActiveChip(this);
+                renderChat(u.history || []);
+            };
+            sc.appendChild(currentChip);
+
+            // 2. Кнопки сохраненных чатов (если есть)
+            if (u.saved_chats) {
+                Object.keys(u.saved_chats).forEach(chatName => {
+                    const chip = document.createElement('div');
+                    chip.className = 'chip';
+                    chip.innerText = "📄 " + chatName;
+                    chip.onclick = function() {
+                        setActiveChip(this);
+                        renderChat(u.saved_chats[chatName]);
+                    };
+                    sc.appendChild(chip);
+                });
+            }
+
+            // Сразу рендерим текущий чат
+            renderChat(u.history || []);
+        }
+
+        function setActiveChip(el) {
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
         }
 
         function renderChat(h) {
@@ -134,4 +218,5 @@
     </script>
 </body>
 </html>
+
 
