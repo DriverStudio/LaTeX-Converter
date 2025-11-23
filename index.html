@@ -15,12 +15,12 @@
         body { font-family: sans-serif; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); margin: 0; padding: 16px; min-height: 100vh; display: flex; flex-direction: column; }
         math-field { width: 100%; font-size: 24px; padding: 8px; background: white !important; color: black !important; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 10px; }
         textarea { width: 100%; height: 100px; border-radius: 12px; padding: 12px; border: 1px solid #ccc; background: var(--tg-theme-secondary-bg-color, #f5f5f5); color: var(--tg-theme-text-color, #000); resize: none; outline: none; box-sizing: border-box;}
-        button { border: none; padding: 14px; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 10px; }
+        button { border: none; padding: 14px 20px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 10px; min-height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .btn-insert { background: #e0e0e0; color: #333; }
         .btn-send { background: var(--tg-theme-button-color, #3390ec); color: white; }
         .answer-box { background: var(--tg-theme-section-bg-color, #fff); padding: 16px; border-radius: 12px; border: 1px solid #eee; word-wrap: break-word; }
         
-        /* АДМИНКА */
+        /* АДМИНКА/ЧАТЫ */
         #admin-mode { display: none; flex-direction: column; height: 100vh; }
         .user-list { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid #ccc; }
         .user-card { min-width: 120px; background: var(--tg-theme-secondary-bg-color, #eee); padding: 10px; border-radius: 8px; cursor: pointer; text-align: center; border: 2px solid transparent; }
@@ -33,32 +33,13 @@
         .msg.assistant { align-self: flex-start; background: var(--tg-theme-secondary-bg-color, #e0e0e0); color: var(--tg-theme-text-color, #000); }
         .hidden { display: none !important; }
         .query-quote { border-left: 3px solid #ccc; padding-left: 10px; margin-bottom: 10px; opacity: 0.7; font-size: 0.9em; }
-        /* 🆕 Стили для переключателя чатов */
-        /* Улучшенные кнопки: не сплющиваются, удобны для пальца */
-        button { 
-            border: none; 
-            padding: 14px 20px; /* Больше отступы */
-            border-radius: 12px; 
-            font-size: 16px; 
-            font-weight: 600; 
-            cursor: pointer; 
-            width: 100%; 
-            margin-top: 10px;
-            min-height: 50px; /* 🆕 Фиксированная минимальная высота */
-            display: flex; align-items: center; justify-content: center; /* Центровка текста */
-            flex-shrink: 0; /* 🆕 Запрет на сжатие */
-        }
-        
-        .btn-insert { background: #e0e0e0; color: #333; }
-        .btn-send { background: var(--tg-theme-button-color, #3390ec); color: white; }
-        
         /* Чипы (кнопки чатов) */
         .session-bar {
             display: flex; gap: 8px; overflow-x: auto; padding: 10px 5px; 
             background: transparent;
             white-space: nowrap; 
-            -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
-            scrollbar-width: none; /* Скрыть скроллбар */
+            -webkit-overflow-scrolling: touch; 
+            scrollbar-width: none;
         }
         .chip {
             padding: 10px 16px; 
@@ -70,7 +51,7 @@
             border: 1px solid #ccc; 
             color: var(--tg-theme-text-color, #000); 
             transition: 0.2s;
-            flex-shrink: 0; /* 🆕 ВАЖНО: Чтобы они не сплющивались в ряд */
+            flex-shrink: 0;
             display: flex; align-items: center;
             min-height: 36px;
         }
@@ -90,8 +71,6 @@
             animation: popIn 0.3s ease;
         }
         @keyframes popIn { from{transform: scale(0.9); opacity:0;} to{transform: scale(1); opacity:1;} }
-        }
-        .chip:hover { opacity: 0.8; }
     </style>
 </head>
 <body> 
@@ -202,7 +181,7 @@
                     document.querySelectorAll('.user-card').forEach(x=>x.classList.remove('active')); 
                     card.classList.add('active'); 
                     
-                    // 🆕 Запуск рендера сессий
+                    // Запуск рендера сессий
                     currentUserData = u;
                     renderSessions(u);
                 };
@@ -210,7 +189,7 @@
             });
         }
 
-        // 🆕 Функция отображения кнопок сессий
+        // Функция отображения кнопок сессий
         function renderSessions(u) {
             const sc = document.getElementById('sessions-container');
             sc.innerHTML = "";
@@ -242,7 +221,7 @@
                     createChip("📄 " + chatName, false, () => {
                         // Рендерим историю
                         renderChat(u.saved_chats[chatName]);
-                        // 🆕 ПОКАЗЫВАЕМ КНОПКУ ИМПОРТА
+                        // ПОКАЗЫВАЕМ КНОПКУ ИМПОРТА
                         showLoadButton(chatName);
                     });
                 });
@@ -252,8 +231,7 @@
             renderChat(u.history || []);
         }
 
-        // 🆕 Функция создания кнопки "Загрузить"
-        // 🆕 Исправленная функция кнопки загрузки
+        // Исправленная функция кнопки загрузки
         function showLoadButton(chatName) {
             removeLoadButton(); // Удаляем старую, если была
             
@@ -278,10 +256,8 @@
                     // 3. Отправляем в бота
                     tg.sendData(payload);
                     
-                    // 4. ПРИНУДИТЕЛЬНО закрываем окно (Telegram иногда тупит и не закрывает сам)
-                    setTimeout(function() {
-                        tg.close();
-                    }, 50);
+                    // 4. ПРИНУДИТЕЛЬНО закрываем окно
+                    tg.close(); // Теперь закрывается немедленно!
                     
                 } catch (e) {
                     tg.showAlert("Ошибка JS: " + e.message);
@@ -316,6 +292,3 @@
     </script>
 </body>
 </html>
-
-
-
