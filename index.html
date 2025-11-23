@@ -19,7 +19,7 @@
             background: var(--tg-theme-bg-color, #fff); 
             color: var(--tg-theme-text-color, #000); 
             margin: 0; 
-            padding: 0; /* Убрал общий padding, чтобы скроллбар был на body */
+            padding: 0;
             min-height: 100vh; 
             display: flex; 
             flex-direction: column; 
@@ -31,15 +31,15 @@
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            overflow-y: auto; /* Для скролла основного контента */
+            overflow-y: auto;
         }
 
         /* ======================== СТИЛИ ФОРМЫ ВВОДА ======================== */
         math-field { 
             width: 100%; 
-            font-size: 20px; /* Немного меньше для лучшей совместимости */
+            font-size: 20px;
             padding: 10px; 
-            background: var(--tg-theme-secondary-bg-color, #f5f5f5); /* Используем переменную темы */
+            background: var(--tg-theme-secondary-bg-color, #f5f5f5);
             color: var(--tg-theme-text-color, #000); 
             border: 1px solid var(--tg-theme-hint-color, #ccc); 
             border-radius: 12px; 
@@ -122,19 +122,49 @@
         #admin-mode { 
             display: none; 
             flex-direction: column; 
-            height: 100vh; /* Занимаем всю высоту для правильного скролла */
+            height: 100vh;
             padding: 0;
-            overflow: hidden; /* Основной контейнер не скроллится */
+            overflow: hidden;
         }
         
+        /* СТИЛИ ВЛАДОК (TABS) */
+        .tabs-nav {
+            display: flex;
+            border-bottom: 1px solid var(--tg-theme-secondary-bg-color, #f0f0f0);
+            margin-bottom: 10px;
+        }
+        .tab-button {
+            flex: 1;
+            text-align: center;
+            padding: 12px 10px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--tg-theme-hint-color, #999);
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-bottom-color 0.2s;
+        }
+        .tab-button.active {
+            color: var(--tg-theme-link-color, #3390ec);
+            border-bottom-color: var(--tg-theme-link-color, #3390ec);
+        }
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+        .tab-content.active {
+            display: flex;
+        }
+
         /* КОНТЕЙНЕР ДЛЯ ЗАКРЕПЛЕННЫХ ЭЛЕМЕНТОВ (Header) */
         .admin-header {
             background: var(--tg-theme-bg-color, #fff);
             padding: 16px 16px 0 16px;
-            position: sticky; /* Закрепление */
+            position: sticky;
             top: 0;
             z-index: 10;
-            border-bottom: 1px solid var(--tg-theme-secondary-bg-color, #f0f0f0);
+            /* Убрал border-bottom, так как его заменяет tabs-nav */
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
 
@@ -142,8 +172,9 @@
             display: flex; 
             gap: 10px; 
             overflow-x: auto; 
-            padding: 0 16px 10px 16px; /* Внутренние отступы для скролла */
-            margin: 0 -16px; /* Компенсация, чтобы скролл был от края до края */
+            padding: 0 16px 10px 16px; 
+            margin: 0 -16px; 
+            border-bottom: 1px solid var(--tg-theme-secondary-bg-color, #f0f0f0); /* Добавил разделитель между юзерами и сессиями */
         }
 
         .user-card { 
@@ -164,7 +195,7 @@
 
         .chat-viewer { 
             flex-grow: 1; 
-            overflow-y: auto; /* Скроллинг только для чата */
+            overflow-y: auto;
             display: flex; 
             flex-direction: column; 
             gap: 10px; 
@@ -185,29 +216,28 @@
             align-self: flex-end; 
             background: var(--tg-theme-button-color, #3390ec); 
             color: var(--tg-theme-button-text-color, white); 
-            border-bottom-right-radius: 4px; /* "Острый" угол к пользователю */
+            border-bottom-right-radius: 4px;
         }
         .msg.assistant { 
             align-self: flex-start; 
             background: var(--tg-theme-secondary-bg-color, #e0e0e0); 
             color: var(--tg-theme-text-color, #000); 
-            border-bottom-left-radius: 4px; /* "Острый" угол к левому краю */
+            border-bottom-left-radius: 4px;
         }
 
         .session-bar {
             display: flex; gap: 8px; overflow-x: auto; 
-            padding: 10px 16px; /* Внутренние отступы */
-            margin: 0 -16px; /* Компенсация, чтобы скролл был от края до края */
-            border-top: 1px solid var(--tg-theme-secondary-bg-color, #f0f0f0);
+            padding: 10px 16px;
+            margin: 0 -16px;
             background: var(--tg-theme-bg-color, #fff);
             white-space: nowrap; 
             -webkit-overflow-scrolling: touch; 
             scrollbar-width: none;
         }
         .chip {
-            padding: 8px 14px; /* Немного уменьшил padding чипов */
+            padding: 8px 14px;
             border-radius: 18px; 
-            font-size: 13px; /* Немного уменьшил шрифт */
+            font-size: 13px;
             cursor: pointer;
             background: var(--tg-theme-secondary-bg-color, #fff); 
             border: 1px solid var(--tg-theme-hint-color, #ccc); 
@@ -217,7 +247,7 @@
             display: flex; align-items: center;
         }
         .chip.active {
-            background: var(--tg-theme-link-color, #3390ec); /* Сделал активный чип цвета ссылки */
+            background: var(--tg-theme-link-color, #3390ec);
             color: white; 
             border-color: transparent;
             box-shadow: 0 1px 4px rgba(51, 144, 236, 0.4);
@@ -226,13 +256,25 @@
         /* Плавающая кнопка загрузки чата */
         .load-chat-btn {
             position: sticky; bottom: 0; left: 0; right: 0;
-            background: var(--tg-theme-link-color, #2ea043); /* Сделал кнопку ярче */
+            background: var(--tg-theme-link-color, #2ea043);
             color: white;
-            box-shadow: 0 -4px 12px rgba(0,0,0,0.1); /* Тень сверху */
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
             margin: 0; 
-            border-radius: 0; /* Растянул на всю ширину */
-            padding: 18px; /* Чуть больше padding */
+            border-radius: 0;
+            padding: 18px;
             z-index: 10;
+        }
+        
+        .stats-card {
+            background: var(--tg-theme-section-bg-color, #fff);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .stats-card h4 {
+            margin-top: 0;
+            color: var(--tg-theme-link-color, #3390ec);
         }
         
     </style>
@@ -266,27 +308,56 @@
         </button>
     </div>
 
-    <!-- ======================== РЕЖИМ АДМИНКИ/ЧАТОВ ======================== -->
+    <!-- ======================== РЕЖИМ АДМИНКИ/ЧАТОВ (С ТАБАМИ) ======================== -->
     <div id="admin-mode">
         
-        <!-- Закрепленный Header с пользователями и чипами сессий -->
+        <!-- Закрепленный Header с вкладками -->
         <div class="admin-header">
-            <h3 style="margin-top: 0; margin-bottom: 15px;">👑 Управление Чатами</h3>
-            <div id="loading-admin" style="text-align: center; padding: 20px;">Загрузка...</div>
+            <h3 style="margin-top: 0; margin-bottom: 10px;">👑 Админ Панель</h3>
             
-            <!-- Скроллируемый список пользователей -->
-            <div id="users-container" class="user-list hidden"></div>
-            
-            <!-- Скроллируемая панель сессий -->
-            <div id="sessions-container" class="session-bar hidden"></div>
+            <div class="tabs-nav">
+                <div class="tab-button active" onclick="switchAdminTab('chats')">
+                    <span style="margin-right: 5px;">👥</span> Пользователи & Чаты
+                </div>
+                <div class="tab-button" onclick="switchAdminTab('stats')">
+                    <span style="margin-right: 5px;">📈</span> Статистика
+                </div>
+            </div>
         </div>
 
-        <!-- Контейнер с самим чатом (прокручивается вместе с содержимым) -->
-        <div id="chat-container" class="chat-viewer">
-            <div style="text-align: center; opacity: 0.5; margin-top: 20px;">Выберите пользователя и чат для просмотра</div>
+        <!-- КОНТЕНТ ВКЛАДКИ "ЧАТЫ" -->
+        <div id="tab-chats" class="tab-content active" style="flex-grow: 1; overflow: hidden; position: relative;">
+            <div id="loading-admin" style="text-align: center; padding: 20px; display: block;">Загрузка...</div>
+            
+            <!-- Скроллируемый список пользователей (часть контента) -->
+            <div id="users-container" class="user-list hidden"></div>
+            
+            <!-- Скроллируемая панель сессий (часть контента) -->
+            <div id="sessions-container" class="session-bar hidden"></div>
+
+            <!-- Контейнер с самим чатом (прокручивается вместе с содержимым) -->
+            <div id="chat-container" class="chat-viewer">
+                <div style="text-align: center; opacity: 0.5; margin-top: 20px;">Выберите пользователя и чат для просмотра</div>
+            </div>
+            
+            <!-- Плавающая кнопка загрузки (Будет добавлена скриптом) -->
         </div>
         
-        <!-- Плавающая кнопка загрузки (Будет добавлена скриптом) -->
+        <!-- КОНТЕНТ ВКЛАДКИ "СТАТИСТИКА" -->
+        <div id="tab-stats" class="tab-content main-container">
+            <div class="stats-card">
+                <h4>Сводка</h4>
+                <p><strong>Пользователей в базе:</strong> <span id="stat-users">...</span></p>
+                <p><strong>Сообщений (сегодня/всего):</strong> <span id="stat-messages">...</span></p>
+                <p><strong>Текущая модель:</strong> <span id="stat-model">...</span></p>
+            </div>
+            <div class="stats-card">
+                <h4>Обслуживание</h4>
+                <p><strong>Последнее сохранение БД:</strong> <span id="stat-last-save">...</span></p>
+                <p><strong>Ошибок AI:</strong> <span id="stat-errors">...</span></p>
+            </div>
+            <p style="opacity: 0.6; font-size: 0.9em;">(Данные статистики будут обновлены после интеграции с Python)</p>
+        </div>
     </div>
 
     <script>
@@ -294,6 +365,25 @@
         tg.expand(); 
         marked.use({ breaks: true, gfm: true });
 
+        // 🆕 ФУНКЦИЯ ПЕРЕКЛЮЧЕНИЯ ВКЛАДОК
+        function switchAdminTab(tabId) {
+            const tabs = document.querySelectorAll('.tab-content');
+            const buttons = document.querySelectorAll('.tab-button');
+            
+            tabs.forEach(tab => tab.classList.remove('active'));
+            buttons.forEach(btn => btn.classList.remove('active'));
+
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            
+            // Находим кнопку, связанную с этой вкладкой, и делаем её активной
+            const activeButton = Array.from(buttons).find(btn => 
+                btn.getAttribute('onclick').includes(`'${tabId}'`)
+            );
+            if (activeButton) {
+                activeButton.classList.add('active');
+            }
+        }
+        
         // Утилита для преобразования Base64 (для современного Clipboard API)
         function base64ToArrayBuffer(base64) {
             const binary_string = window.atob(base64);
@@ -386,6 +476,16 @@
                 document.getElementById('sessions-container').classList.remove('hidden');
                 document.getElementById('chat-container').classList.remove('hidden');
                 renderUserList(db);
+                
+                // 🆕 Обновление заглушек статистики
+                const userCount = Object.keys(db).filter(k => k !== 'metadata' && k !== 'record' && typeof db[k] === 'object').length;
+                document.getElementById('stat-users').innerText = userCount;
+                document.getElementById('stat-model').innerText = "Mistral Large (Mock)";
+                document.getElementById('stat-messages').innerText = "150 / 8900 (Mock)";
+                document.getElementById('stat-last-save').innerText = "2025-11-23 15:30:00 (Mock)";
+                document.getElementById('stat-errors').innerText = "5 (Mock)";
+
+
             })
             .catch(e => {
                 document.getElementById('loading-admin').innerHTML = "❌ Ошибка загрузки данных: " + e.message;
