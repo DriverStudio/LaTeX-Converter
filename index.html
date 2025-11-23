@@ -34,17 +34,62 @@
         .hidden { display: none !important; }
         .query-quote { border-left: 3px solid #ccc; padding-left: 10px; margin-bottom: 10px; opacity: 0.7; font-size: 0.9em; }
         /* 🆕 Стили для переключателя чатов */
+        /* Улучшенные кнопки: не сплющиваются, удобны для пальца */
+        button { 
+            border: none; 
+            padding: 14px 20px; /* Больше отступы */
+            border-radius: 12px; 
+            font-size: 16px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            width: 100%; 
+            margin-top: 10px;
+            min-height: 50px; /* 🆕 Фиксированная минимальная высота */
+            display: flex; align-items: center; justify-content: center; /* Центровка текста */
+            flex-shrink: 0; /* 🆕 Запрет на сжатие */
+        }
+        
+        .btn-insert { background: #e0e0e0; color: #333; }
+        .btn-send { background: var(--tg-theme-button-color, #3390ec); color: white; }
+        
+        /* Чипы (кнопки чатов) */
         .session-bar {
-            display: flex; gap: 8px; overflow-x: auto; padding: 10px; 
-            background: rgba(0,0,0,0.05); border-bottom: 1px solid #ccc;
-            white-space: nowrap; -webkit-overflow-scrolling: touch;
+            display: flex; gap: 8px; overflow-x: auto; padding: 10px 5px; 
+            background: transparent;
+            white-space: nowrap; 
+            -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
+            scrollbar-width: none; /* Скрыть скроллбар */
         }
         .chip {
-            padding: 6px 12px; border-radius: 20px; font-size: 13px; cursor: pointer;
-            background: #fff; border: 1px solid #ccc; color: #333; transition: 0.2s;
+            padding: 10px 16px; 
+            border-radius: 20px; 
+            font-size: 14px; 
+            font-weight: 500;
+            cursor: pointer;
+            background: var(--tg-theme-secondary-bg-color, #fff); 
+            border: 1px solid #ccc; 
+            color: var(--tg-theme-text-color, #000); 
+            transition: 0.2s;
+            flex-shrink: 0; /* 🆕 ВАЖНО: Чтобы они не сплющивались в ряд */
+            display: flex; align-items: center;
+            min-height: 36px;
         }
         .chip.active {
-            background: var(--tg-theme-button-color, #3390ec); color: white; border-color: transparent;
+            background: var(--tg-theme-button-color, #3390ec); 
+            color: white; 
+            border-color: transparent;
+            box-shadow: 0 2px 8px rgba(51, 144, 236, 0.4);
+        }
+        
+        /* Плавающая кнопка загрузки чата */
+        .load-chat-btn {
+            position: sticky; bottom: 20px; left: 0; right: 0;
+            background: #2ea043; color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            margin: 10px auto; width: 90%;
+            animation: popIn 0.3s ease;
+        }
+        @keyframes popIn { from{transform: scale(0.9); opacity:0;} to{transform: scale(1); opacity:1;} }
         }
         .chip:hover { opacity: 0.8; }
     </style>
@@ -170,33 +215,66 @@
             const sc = document.getElementById('sessions-container');
             sc.innerHTML = "";
             sc.classList.remove('hidden');
-
-            // 1. Кнопка "Текущий чат" (всегда первая)
-            const currentChip = document.createElement('div');
-            currentChip.className = 'chip active'; // По умолчанию активна
-            currentChip.innerText = "⚡️ Текущий";
-            currentChip.onclick = function() {
-                setActiveChip(this);
-                renderChat(u.history || []);
+            
+            // Функция для создания кнопок-чипов
+            const createChip = (text, isCurrent, onClick) => {
+                const chip = document.createElement('div');
+                chip.className = 'chip' + (isCurrent ? ' active' : '');
+                chip.innerText = text;
+                chip.onclick = function() {
+                    // Снимаем активность со всех
+                    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    onClick();
+                };
+                sc.appendChild(chip);
             };
-            sc.appendChild(currentChip);
 
-            // 2. Кнопки сохраненных чатов (если есть)
+            // 1. Чип текущего чата
+            createChip("⚡️ Текущий", true, () => {
+                removeLoadButton(); // Убираем кнопку загрузки (текущий и так загружен)
+                renderChat(u.history || []);
+            });
+
+            // 2. Чипы сохраненных чатов
             if (u.saved_chats) {
                 Object.keys(u.saved_chats).forEach(chatName => {
-                    const chip = document.createElement('div');
-                    chip.className = 'chip';
-                    chip.innerText = "📄 " + chatName;
-                    chip.onclick = function() {
-                        setActiveChip(this);
+                    createChip("📄 " + chatName, false, () => {
+                        // Рендерим историю
                         renderChat(u.saved_chats[chatName]);
-                    };
-                    sc.appendChild(chip);
+                        // 🆕 ПОКАЗЫВАЕМ КНОПКУ ИМПОРТА
+                        showLoadButton(chatName);
+                    });
                 });
             }
-
-            // Сразу рендерим текущий чат
+            
+            // Сразу рендерим текущий
             renderChat(u.history || []);
+        }
+
+        // 🆕 Функция создания кнопки "Загрузить"
+        function showLoadButton(chatName) {
+            removeLoadButton(); // Удаляем старую, если была
+            
+            const btn = document.createElement('button');
+            btn.className = 'load-chat-btn';
+            btn.id = 'btn-load-session';
+            btn.innerHTML = `📥 Загрузить чат «${chatName}»`;
+            btn.onclick = () => {
+                // Отправляем команду боту и закрываем окно
+                tg.sendData(JSON.stringify({
+                    action: 'load_session',
+                    name: chatName
+                }));
+            };
+            
+            // Добавляем кнопку ПОВЕРХ чата (в контейнер чата или админки)
+            document.getElementById('admin-mode').appendChild(btn);
+        }
+
+        function removeLoadButton() {
+            const existing = document.getElementById('btn-load-session');
+            if(existing) existing.remove();
         }
 
         function setActiveChip(el) {
@@ -218,5 +296,6 @@
     </script>
 </body>
 </html>
+
 
 
