@@ -231,40 +231,48 @@
             renderChat(u.history || []);
         }
 
-        // Исправленная функция кнопки загрузки
+        // 🆕 Измененная функция кнопки загрузки: теперь копирует команду в буфер
         function showLoadButton(chatName) {
             removeLoadButton(); // Удаляем старую, если была
             
             const btn = document.createElement('button');
             btn.className = 'load-chat-btn';
             btn.id = 'btn-load-session';
-            btn.innerHTML = `📥 Загрузить чат «${chatName}»`;
+            btn.innerHTML = `📥 Копировать команду для загрузки «${chatName}»`;
             
             // ВАЖНОЕ ИЗМЕНЕНИЕ: Обработчик клика
             btn.onclick = function() {
-                // 1. Визуальный эффект нажатия
-                btn.innerHTML = "⏳ Загружаю...";
-                btn.style.opacity = "0.7";
+                // 1. Формируем команду в виде JSON строки
+                const command = JSON.stringify({
+                    action: 'load_session',
+                    name: chatName
+                });
                 
                 try {
-                    // 2. Формируем данные
-                    const payload = JSON.stringify({
-                        action: 'load_session',
-                        name: chatName
+                    // 2. Копируем команду в буфер обмена
+                    // Используем document.execCommand('copy') для совместимости с iFrame
+                    const tempInput = document.createElement('textarea');
+                    tempInput.value = command;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+
+                    // 3. Сообщение пользователю
+                    tg.showPopup({
+                        message: `✅ Команда для загрузки чата «${chatName}» скопирована!\n\nИнструкция: Вставьте (Paste) скопированный текст в строку ввода Telegram и нажмите Отправить.`,
+                        buttons: [{id: 'close', type: 'default', text: 'Закрыть и вставить'}]
+                    }, () => {
+                        // 4. Закрываем Web App после того, как пользователь прочитал инструкцию
+                        tg.close();
                     });
                     
-                    // 3. Отправляем в бота
-                    tg.sendData(payload);
-                    
-                    // 4. ПРИНУДИТЕЛЬНО закрываем окно
-                    tg.close(); // Теперь закрывается немедленно!
-                    
                 } catch (e) {
-                    tg.showAlert("Ошибка JS: " + e.message);
+                    tg.showAlert("❌ Ошибка копирования. Скопируйте вручную:\n" + command);
                 }
             };
             
-            // Добавляем кнопку в контейнер админки
+            // Добавляем кнопку
             document.getElementById('admin-mode').appendChild(btn);
         }
 
