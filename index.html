@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Dashboard</title>
+    <!-- Подключение библиотек -->
     <script src="https://unpkg.com/mathlive"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -12,196 +13,452 @@
     <script src="https://cdn.jsdelivr.net/npm/katex/dist/contrib/auto-render.min.js"></script>
 
     <style>
-        body { font-family: sans-serif; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); margin: 0; padding: 16px; min-height: 100vh; display: flex; flex-direction: column; }
-        math-field { width: 100%; font-size: 24px; padding: 8px; background: white !important; color: black !important; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 10px; }
-        textarea { width: 100%; height: 100px; border-radius: 12px; padding: 12px; border: 1px solid #ccc; background: var(--tg-theme-secondary-bg-color, #f5f5f5); color: var(--tg-theme-text-color, #000); resize: none; outline: none; box-sizing: border-box;}
-        button { border: none; padding: 14px 20px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 10px; min-height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .btn-insert { background: #e0e0e0; color: #333; }
-        .btn-send { background: var(--tg-theme-button-color, #3390ec); color: white; }
-        .answer-box { background: var(--tg-theme-section-bg-color, #fff); padding: 16px; border-radius: 12px; border: 1px solid #eee; word-wrap: break-word; }
+        /* ======================== ОБЩИЕ СТИЛИ ======================== */
+        body { 
+            font-family: sans-serif; 
+            background: var(--tg-theme-bg-color, #fff); 
+            color: var(--tg-theme-text-color, #000); 
+            margin: 0; 
+            padding: 0; /* Убрал общий padding, чтобы скроллбар был на body */
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+        }
+
+        /* Контейнер для всех режимов, чтобы вернуть внутренние отступы */
+        .main-container {
+            padding: 16px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto; /* Для скролла основного контента */
+        }
+
+        /* ======================== СТИЛИ ФОРМЫ ВВОДА ======================== */
+        math-field { 
+            width: 100%; 
+            font-size: 20px; /* Немного меньше для лучшей совместимости */
+            padding: 10px; 
+            background: var(--tg-theme-secondary-bg-color, #f5f5f5); /* Используем переменную темы */
+            color: var(--tg-theme-text-color, #000); 
+            border: 1px solid var(--tg-theme-hint-color, #ccc); 
+            border-radius: 12px; 
+            margin-bottom: 10px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
         
-        /* АДМИНКА/ЧАТЫ */
-        #admin-mode { display: none; flex-direction: column; height: 100vh; }
-        .user-list { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid #ccc; }
-        .user-card { min-width: 120px; background: var(--tg-theme-secondary-bg-color, #eee); padding: 10px; border-radius: 8px; cursor: pointer; text-align: center; border: 2px solid transparent; }
-        .user-card.active { border-color: var(--tg-theme-button-color, #3390ec); background: #fff; }
-        .user-name { font-weight: bold; font-size: 14px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 110px; }
-        .user-id { font-size: 11px; opacity: 0.6; }
-        .chat-viewer { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 10px; background: rgba(0,0,0,0.03); border-radius: 8px; }
-        .msg { padding: 10px; border-radius: 8px; max-width: 85%; font-size: 14px; }
-        .msg.user { align-self: flex-end; background: var(--tg-theme-button-color, #3390ec); color: white; }
-        .msg.assistant { align-self: flex-start; background: var(--tg-theme-secondary-bg-color, #e0e0e0); color: var(--tg-theme-text-color, #000); }
-        .hidden { display: none !important; }
-        .query-quote { border-left: 3px solid #ccc; padding-left: 10px; margin-bottom: 10px; opacity: 0.7; font-size: 0.9em; }
-        /* Чипы (кнопки чатов) */
+        textarea { 
+            width: 100%; 
+            height: 120px; 
+            border-radius: 12px; 
+            padding: 12px; 
+            border: 1px solid var(--tg-theme-hint-color, #ccc); 
+            background: var(--tg-theme-secondary-bg-color, #f5f5f5); 
+            color: var(--tg-theme-text-color, #000); 
+            resize: none; 
+            outline: none; 
+            box-sizing: border-box;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        textarea:focus {
+            border-color: var(--tg-theme-link-color, #3390ec);
+        }
+
+        button { 
+            border: none; 
+            padding: 14px 20px; 
+            border-radius: 12px; 
+            font-size: 16px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            width: 100%; 
+            margin-top: 10px; 
+            min-height: 50px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            flex-shrink: 0; 
+            transition: background 0.2s, transform 0.1s;
+        }
+        button:active {
+            transform: scale(0.99);
+        }
+
+        /* Кнопка "Вставить" стала более акцентной */
+        .btn-insert { 
+            background: var(--tg-theme-hint-color, #ccc); 
+            color: var(--tg-theme-text-color, #333); 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn-send { 
+            background: var(--tg-theme-button-color, #3390ec); 
+            color: var(--tg-theme-button-text-color, white); 
+            box-shadow: 0 4px 8px rgba(51, 144, 236, 0.4);
+        }
+
+        /* ======================== СТИЛИ ОТВЕТА ======================== */
+        .answer-box { 
+            background: var(--tg-theme-section-bg-color, #fff); 
+            padding: 16px; 
+            border-radius: 12px; 
+            border: 1px solid var(--tg-theme-secondary-bg-color, #eee); 
+            word-wrap: break-word; 
+            min-height: 150px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .query-quote { 
+            /* Улучшенный стиль для цитаты запроса */
+            border-left: 5px solid var(--tg-theme-hint-color, #ccc); 
+            background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+            padding: 10px 10px 10px 15px;
+            margin-bottom: 15px; 
+            opacity: 0.9; 
+            font-size: 0.9em; 
+            border-radius: 0 8px 8px 0;
+        }
+        
+        /* ======================== АДМИНКА / ЧАТЫ (Самое важное улучшение) ======================== */
+        #admin-mode { 
+            display: none; 
+            flex-direction: column; 
+            height: 100vh; /* Занимаем всю высоту для правильного скролла */
+            padding: 0;
+            overflow: hidden; /* Основной контейнер не скроллится */
+        }
+        
+        /* КОНТЕЙНЕР ДЛЯ ЗАКРЕПЛЕННЫХ ЭЛЕМЕНТОВ (Header) */
+        .admin-header {
+            background: var(--tg-theme-bg-color, #fff);
+            padding: 16px 16px 0 16px;
+            position: sticky; /* Закрепление */
+            top: 0;
+            z-index: 10;
+            border-bottom: 1px solid var(--tg-theme-secondary-bg-color, #f0f0f0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .user-list { 
+            display: flex; 
+            gap: 10px; 
+            overflow-x: auto; 
+            padding: 0 16px 10px 16px; /* Внутренние отступы для скролла */
+            margin: 0 -16px; /* Компенсация, чтобы скролл был от края до края */
+        }
+
+        .user-card { 
+            min-width: 120px; 
+            background: var(--tg-theme-secondary-bg-color, #eee); 
+            padding: 10px; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            text-align: center; 
+            border: 2px solid transparent; 
+            transition: 0.2s;
+            flex-shrink: 0;
+        }
+        .user-card.active { 
+            border-color: var(--tg-theme-button-color, #3390ec); 
+            background: var(--tg-theme-section-bg-color, #fff); 
+        }
+
+        .chat-viewer { 
+            flex-grow: 1; 
+            overflow-y: auto; /* Скроллинг только для чата */
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            padding: 16px; 
+            background: var(--tg-theme-bg-color, #fff); 
+        }
+
+        /* Стиль для сообщений */
+        .msg { 
+            padding: 12px; 
+            border-radius: 15px; 
+            max-width: 85%; 
+            font-size: 15px; 
+            line-height: 1.4;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .msg.user { 
+            align-self: flex-end; 
+            background: var(--tg-theme-button-color, #3390ec); 
+            color: var(--tg-theme-button-text-color, white); 
+            border-bottom-right-radius: 4px; /* "Острый" угол к пользователю */
+        }
+        .msg.assistant { 
+            align-self: flex-start; 
+            background: var(--tg-theme-secondary-bg-color, #e0e0e0); 
+            color: var(--tg-theme-text-color, #000); 
+            border-bottom-left-radius: 4px; /* "Острый" угол к левому краю */
+        }
+
         .session-bar {
-            display: flex; gap: 8px; overflow-x: auto; padding: 10px 5px; 
-            background: transparent;
+            display: flex; gap: 8px; overflow-x: auto; 
+            padding: 10px 16px; /* Внутренние отступы */
+            margin: 0 -16px; /* Компенсация, чтобы скролл был от края до края */
+            border-top: 1px solid var(--tg-theme-secondary-bg-color, #f0f0f0);
+            background: var(--tg-theme-bg-color, #fff);
             white-space: nowrap; 
             -webkit-overflow-scrolling: touch; 
             scrollbar-width: none;
         }
         .chip {
-            padding: 10px 16px; 
-            border-radius: 20px; 
-            font-size: 14px; 
-            font-weight: 500;
+            padding: 8px 14px; /* Немного уменьшил padding чипов */
+            border-radius: 18px; 
+            font-size: 13px; /* Немного уменьшил шрифт */
             cursor: pointer;
             background: var(--tg-theme-secondary-bg-color, #fff); 
-            border: 1px solid #ccc; 
+            border: 1px solid var(--tg-theme-hint-color, #ccc); 
             color: var(--tg-theme-text-color, #000); 
             transition: 0.2s;
             flex-shrink: 0;
             display: flex; align-items: center;
-            min-height: 36px;
         }
         .chip.active {
-            background: var(--tg-theme-button-color, #3390ec); 
+            background: var(--tg-theme-link-color, #3390ec); /* Сделал активный чип цвета ссылки */
             color: white; 
             border-color: transparent;
-            box-shadow: 0 2px 8px rgba(51, 144, 236, 0.4);
+            box-shadow: 0 1px 4px rgba(51, 144, 236, 0.4);
         }
         
         /* Плавающая кнопка загрузки чата */
         .load-chat-btn {
-            position: sticky; bottom: 20px; left: 0; right: 0;
-            background: #2ea043; color: white;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            margin: 10px auto; width: 90%;
-            animation: popIn 0.3s ease;
+            position: sticky; bottom: 0; left: 0; right: 0;
+            background: var(--tg-theme-link-color, #2ea043); /* Сделал кнопку ярче */
+            color: white;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.1); /* Тень сверху */
+            margin: 0; 
+            border-radius: 0; /* Растянул на всю ширину */
+            padding: 18px; /* Чуть больше padding */
+            z-index: 10;
         }
-        @keyframes popIn { from{transform: scale(0.9); opacity:0;} to{transform: scale(1); opacity:1;} }
+        
     </style>
 </head>
 <body> 
 
-    <div id="input-mode">
-        <label>📝 Текст:</label>
-        <textarea id="main-text" placeholder="Введите запрос..."></textarea>
-        <div>
-            <label>🧮 Формула:</label>
-            <math-field id="math-input" virtual-keyboard-mode="onfocus"></math-field>
-            <button class="btn-insert" onclick="insertFormula()">⬆️ Вставить</button>
+    <!-- ======================== РЕЖИМ ВВОДА ======================== -->
+    <div id="input-mode" class="main-container">
+        <label style="font-weight: 500; margin-bottom: 5px; color: var(--tg-theme-hint-color);">📝 Текст запроса:</label>
+        <textarea id="main-text" placeholder="Введите ваш вопрос или задачу..."></textarea>
+        <div style="margin-top: 15px;">
+            <label style="font-weight: 500; margin-bottom: 5px; color: var(--tg-theme-hint-color);">🧮 LaTeX Формула:</label>
+            <math-field id="math-input" virtual-keyboard-mode="onfocus" style="margin-bottom: 5px;"></math-field>
+            <button class="btn-insert" onclick="insertFormula()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                Вставить Формулу в Текст
+            </button>
         </div>
-        <button class="btn-send" onclick="sendData()">✈️ Отправить</button>
+        <button class="btn-send" onclick="sendData()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13"></path></svg>
+            Отправить Запрос AI
+        </button>
     </div>
 
-    <div id="answer-mode" class="hidden">
-        <h3>🎓 Решение:</h3>
-        <div id="answer-content" class="answer-box"></div>
-        <button style="background: #ccc; color: #333;" onclick="window.Telegram.WebApp.close()">Закрыть</button>
+    <!-- ======================== РЕЖИМ ОТВЕТА ======================== -->
+    <div id="answer-mode" class="main-container hidden">
+        <h3 style="margin-top: 0; color: var(--tg-theme-text-color);">🎓 Решение:</h3>
+        <div id="answer-content" class="answer-box">Загрузка...</div>
+        <button style="background: var(--tg-theme-secondary-bg-color, #ccc); color: var(--tg-theme-text-color, #333); margin-top: 20px;" onclick="window.Telegram.WebApp.close()">
+            Закрыть Web App
+        </button>
     </div>
 
+    <!-- ======================== РЕЖИМ АДМИНКИ/ЧАТОВ ======================== -->
     <div id="admin-mode">
-        <h3>👑 Dashboard</h3>
-        <div id="loading-admin">Загрузка...</div>
         
-        <div id="users-container" class="user-list hidden"></div>
-        
-        <div id="sessions-container" class="session-bar hidden"></div>
-
-        <div id="chat-container" class="chat-viewer hidden">
-            <div style="text-align: center; opacity: 0.5; margin-top: 20px;">Выберите пользователя</div>
+        <!-- Закрепленный Header с пользователями и чипами сессий -->
+        <div class="admin-header">
+            <h3 style="margin-top: 0; margin-bottom: 15px;">👑 Управление Чатами</h3>
+            <div id="loading-admin" style="text-align: center; padding: 20px;">Загрузка...</div>
+            
+            <!-- Скроллируемый список пользователей -->
+            <div id="users-container" class="user-list hidden"></div>
+            
+            <!-- Скроллируемая панель сессий -->
+            <div id="sessions-container" class="session-bar hidden"></div>
         </div>
+
+        <!-- Контейнер с самим чатом (прокручивается вместе с содержимым) -->
+        <div id="chat-container" class="chat-viewer">
+            <div style="text-align: center; opacity: 0.5; margin-top: 20px;">Выберите пользователя и чат для просмотра</div>
+        </div>
+        
+        <!-- Плавающая кнопка загрузки (Будет добавлена скриптом) -->
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp; tg.expand(); marked.use({ breaks: true, gfm: true });
+        const tg = window.Telegram.WebApp; 
+        tg.expand(); 
+        marked.use({ breaks: true, gfm: true });
 
-        function renderContent(text, elId='answer-content') {
-            const da = document.getElementById(elId); const mb = [];
-            let pt = text.replace(/\$\$([\s\S]*?)\$\$/g, m=>{mb.push(m);return '%%%B'+(mb.length-1)+'%%%'});
-            pt = pt.replace(/\$([\s\S]*?)\$/g, m=>{mb.push(m);return '%%%I'+(mb.length-1)+'%%%'});
-            let html = marked.parse(pt);
-            html = html.replace(/%%%B(\d+)%%%/g, (m,i)=>mb[i]).replace(/%%%I(\d+)%%%/g, (m,i)=>mb[i]);
-            da.innerHTML = html;
-            renderMathInElement(da, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});
+        // Утилита для преобразования Base64 (для современного Clipboard API)
+        function base64ToArrayBuffer(base64) {
+            const binary_string = window.atob(base64);
+            const len = binary_string.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            }
+            return bytes.buffer;
         }
 
-        function insertFormula() { const mf = document.getElementById('math-input'), ta = document.getElementById('main-text'); if(!mf.value) return; const tag=" $"+mf.value+"$ ", s=ta.selectionStart; ta.value=ta.value.slice(0,s)+tag+ta.value.slice(ta.selectionEnd); ta.focus(); ta.selectionStart=s+tag.length; mf.setValue(""); }
-        function sendData() { const t=document.getElementById('main-text').value; if(!t.trim()) return tg.showPopup({message:'Пусто!'}); tg.sendData(JSON.stringify({full_text:t})); }
+        // Рендеринг контента с учетом Markdown и KaTeX
+        function renderContent(text, elId='answer-content') {
+            const da = document.getElementById(elId); 
+            const mb = [];
+            
+            // Заменяем блоки формул ($$...$$) на временные метки
+            let pt = text.replace(/\$\$([\s\S]*?)\$\$/g, m => {
+                mb.push(m);
+                return '%%%B' + (mb.length - 1) + '%%%';
+            });
+            // Заменяем инлайн-формулы ($...$) на временные метки
+            pt = pt.replace(/\$([\s\S]*?)\$/g, m => {
+                mb.push(m);
+                return '%%%I' + (mb.length - 1) + '%%%';
+            });
+            
+            let html = marked.parse(pt);
+            
+            // Возвращаем формулы на место
+            html = html.replace(/%%%B(\d+)%%%/g, (m, i) => mb[i]).replace(/%%%I(\d+)%%%/g, (m, i) => mb[i]);
+            
+            da.innerHTML = html;
+            
+            // Рендерим KaTeX
+            renderMathInElement(da, {
+                delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }], 
+                throwOnError: false
+            });
+        }
+
+        // Вставка формулы в основное текстовое поле
+        function insertFormula() { 
+            const mf = document.getElementById('math-input'); 
+            const ta = document.getElementById('main-text'); 
+            
+            if(!mf.value.trim()) return; 
+            
+            // Добавляем пробел до и после для чистоты
+            const tag=" $"+mf.value.trim()+"$ ", s=ta.selectionStart; 
+            
+            // Вставляем формулу в место курсора
+            ta.value = ta.value.slice(0, s) + tag + ta.value.slice(ta.selectionEnd); 
+            
+            ta.focus(); 
+            ta.selectionStart = s + tag.length; 
+            
+            mf.setValue(""); // Очищаем поле ввода формулы
+        }
+        
+        // Отправка данных боту
+        function sendData() { 
+            const t = document.getElementById('main-text').value; 
+            if(!t.trim()) return tg.showPopup({message:'Пожалуйста, введите текст запроса.'}); 
+            
+            // Отправляем объект JSON, как ожидает Python-бот
+            tg.sendData(JSON.stringify({full_text: t})); 
+        }
 
         const params = new URLSearchParams(window.location.search);
-        const adminId = params.get('adminBinId'), dataId = params.get('binId'), direct = params.get('data');
+        const adminId = params.get('adminBinId');
+        const dataId = params.get('binId');
+        const direct = params.get('data');
 
         if(adminId) {
+            // АДМИН-РЕЖИМ: Активируем админку
             document.getElementById('input-mode').classList.add('hidden');
             document.getElementById('admin-mode').style.display = 'flex';
             
-            // Убрал заголовки, чтобы не было CORS ошибки
+            // Загрузка данных
             fetch(`https://api.jsonbin.io/v3/b/${adminId}/latest`)
-            .then(r=>r.json())
+            .then(r => {
+                if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
+                return r.json();
+            })
             .then(json => {
                 const db = json.record || json; 
                 document.getElementById('loading-admin').classList.add('hidden');
                 document.getElementById('users-container').classList.remove('hidden');
+                document.getElementById('sessions-container').classList.remove('hidden');
                 document.getElementById('chat-container').classList.remove('hidden');
                 renderUserList(db);
             })
-            .catch(e => document.getElementById('loading-admin').innerHTML = "Ошибка загрузки: "+e);
+            .catch(e => {
+                document.getElementById('loading-admin').innerHTML = "❌ Ошибка загрузки данных: " + e.message;
+                console.error("Admin Load Error:", e);
+            });
 
         } else if(dataId || direct) {
+            // РЕЖИМ ОТВЕТА: Показываем решение
             document.getElementById('input-mode').classList.add('hidden');
             document.getElementById('answer-mode').classList.remove('hidden');
-            if(direct) renderContent(decodeURIComponent(direct));
-            else fetch(`https://api.jsonbin.io/v3/b/${dataId}/latest`).then(r=>r.json()).then(j=>{
-                const r = j.record || j; const a = r.answer || r; const q = r.query ? `<div class="query-quote"><b>Запрос:</b> ${r.query}</div>` : "";
-                renderContent(q + a);
-            });
+            
+            if(direct) {
+                // Прямой ответ (в одну строку)
+                renderContent(decodeURIComponent(direct));
+            } else {
+                // Ответ из облака (длинный ответ)
+                fetch(`https://api.jsonbin.io/v3/b/${dataId}/latest`)
+                .then(r => r.json())
+                .then(j => {
+                    const r = j.record || j; 
+                    const a = r.answer || r; 
+                    // Улучшенная разметка цитаты
+                    const q = r.query ? `<div class="query-quote"><b>Запрос:</b> ${r.query}</div>` : "";
+                    renderContent(q + a);
+                });
+            }
         }
 
-        let currentUserData = null; // Глобальная переменная для текущего юзера
+        let currentUserData = null; 
 
         function renderUserList(db) {
             const c = document.getElementById('users-container');
             c.innerHTML = "";
-            // Фильтруем служебные поля JSONBin
             const userIds = Object.keys(db).filter(k => k !== 'metadata' && k !== 'record' && typeof db[k] === 'object');
             
-            if(userIds.length === 0) return c.innerHTML = "<div style='padding:10px'>Пусто</div>";
+            if(userIds.length === 0) return c.innerHTML = "<div style='padding:10px'>Нет данных пользователей.</div>";
 
             userIds.forEach(uid => {
                 const u = db[uid]; 
                 const card = document.createElement('div'); 
                 card.className = 'user-card';
                 
-                // Имя пользователя
-                const name = u.name || 'User ' + uid;
-                // Подсчет количества сохраненных чатов для красоты
+                const name = u.name || `User ${uid}`;
                 const savedCount = u.saved_chats ? Object.keys(u.saved_chats).length : 0;
                 
                 card.innerHTML = `
-                    <span class="user-name">${name}</span>
+                    <span class="user-name" title="${name}">${name}</span>
                     <span class="user-id">ID: ${uid}</span>
-                    ${savedCount > 0 ? `<span style="font-size:10px; color:green">📚 ${savedCount} шт.</span>` : ''}
+                    ${savedCount > 0 ? `<span style="font-size:10px; color:#2ecc71; margin-top: 3px;">📚 ${savedCount} шт.</span>` : ''}
                 `;
                 
                 card.onclick = () => { 
-                    // Подсветка активного пользователя
                     document.querySelectorAll('.user-card').forEach(x=>x.classList.remove('active')); 
                     card.classList.add('active'); 
                     
-                    // Запуск рендера сессий
                     currentUserData = u;
                     renderSessions(u);
                 };
                 c.appendChild(card);
             });
+            // Выделяем первого пользователя по умолчанию
+            if (c.firstChild) c.firstChild.click();
         }
 
-        // Функция отображения кнопок сессий
         function renderSessions(u) {
             const sc = document.getElementById('sessions-container');
             sc.innerHTML = "";
-            sc.classList.remove('hidden');
             
-            // Функция для создания кнопок-чипов
             const createChip = (text, isCurrent, onClick) => {
                 const chip = document.createElement('div');
                 chip.className = 'chip' + (isCurrent ? ' active' : '');
                 chip.innerText = text;
                 chip.onclick = function() {
-                    // Снимаем активность со всех
                     document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
                     this.classList.add('active');
                     onClick();
@@ -211,7 +468,7 @@
 
             // 1. Чип текущего чата
             createChip("⚡️ Текущий", true, () => {
-                removeLoadButton(); // Убираем кнопку загрузки (текущий и так загружен)
+                removeLoadButton(); 
                 renderChat(u.history || []);
             });
 
@@ -219,60 +476,58 @@
             if (u.saved_chats) {
                 Object.keys(u.saved_chats).forEach(chatName => {
                     createChip("📄 " + chatName, false, () => {
-                        // Рендерим историю
                         renderChat(u.saved_chats[chatName]);
-                        // ПОКАЗЫВАЕМ КНОПКУ ИМПОРТА
                         showLoadButton(chatName);
                     });
                 });
             }
             
-            // Сразу рендерим текущий
-            renderChat(u.history || []);
+            // Сразу рендерим текущий, убедившись, что он активен
+            if (sc.firstChild) sc.firstChild.click();
+            else renderChat(u.history || []); // Рендер пустого, если нет истории
         }
 
-        // 🆕 Измененная функция кнопки загрузки: теперь копирует команду в буфер
+        // 🆕 Обновленная функция кнопки загрузки с использованием Clipboard API
         function showLoadButton(chatName) {
-            removeLoadButton(); // Удаляем старую, если была
+            removeLoadButton();
             
             const btn = document.createElement('button');
             btn.className = 'load-chat-btn';
             btn.id = 'btn-load-session';
-            btn.innerHTML = `📥 Копировать команду для загрузки «${chatName}»`;
+            btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>Копировать команду для загрузки «${chatName}»`;
             
-            // ВАЖНОЕ ИЗМЕНЕНИЕ: Обработчик клика
-            btn.onclick = function() {
-                // 1. Формируем команду в виде JSON строки
+            btn.onclick = async function() {
                 const command = JSON.stringify({
                     action: 'load_session',
                     name: chatName
                 });
                 
                 try {
-                    // 2. Копируем команду в буфер обмена
-                    // Используем document.execCommand('copy') для совместимости с iFrame
-                    const tempInput = document.createElement('textarea');
-                    tempInput.value = command;
-                    document.body.appendChild(tempInput);
-                    tempInput.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(tempInput);
+                    // Используем современный Clipboard API (более надежный)
+                    if (navigator.clipboard) {
+                        await navigator.clipboard.writeText(command);
+                    } else {
+                        // Fallback для iFrame, который может не поддерживать Clipboard API
+                        const tempInput = document.createElement('textarea');
+                        tempInput.value = command;
+                        document.body.appendChild(tempInput);
+                        tempInput.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(tempInput);
+                    }
 
-                    // 3. Сообщение пользователю
                     tg.showPopup({
-                        message: `✅ Команда для загрузки чата «${chatName}» скопирована!\n\nИнструкция: Вставьте (Paste) скопированный текст в строку ввода Telegram и нажмите Отправить.`,
+                        message: `✅ Команда для загрузки чата «${chatName}» скопирована!\n\nИнструкция: Вставьте скопированный текст в строку ввода Telegram и нажмите Отправить.`,
                         buttons: [{id: 'close', type: 'default', text: 'Закрыть и вставить'}]
                     }, () => {
-                        // 4. Закрываем Web App после того, как пользователь прочитал инструкцию
                         tg.close();
                     });
                     
                 } catch (e) {
-                    tg.showAlert("❌ Ошибка копирования. Скопируйте вручную:\n" + command);
+                    tg.showAlert("❌ Ошибка копирования. Попробуйте еще раз. (" + e.message + ")");
                 }
             };
             
-            // Добавляем кнопку
             document.getElementById('admin-mode').appendChild(btn);
         }
 
@@ -282,18 +537,28 @@
         }
 
         function setActiveChip(el) {
+            // Функция оставлена для совместимости, но логика перенесена в renderSessions
             document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
             el.classList.add('active');
         }
 
         function renderChat(h) {
             const d = document.getElementById('chat-container'); d.innerHTML = "";
-            if(!h || h.length===0) return d.innerHTML="<div style='text-align:center;margin-top:20px'>История пуста</div>";
+            if(!h || h.length === 0) return d.innerHTML="<div style='text-align:center; opacity: 0.6; margin-top: 20px;'>История диалога пуста.</div>";
+            
             h.forEach(m => {
-                const b = document.createElement('div'); b.className = `msg ${m.role}`;
+                const b = document.createElement('div'); 
+                b.className = `msg ${m.role}`;
                 const uid = 'msg-'+Math.random().toString(36).substr(2,9);
-                b.innerHTML = `<span class="msg-role">${m.role==='user'?'Пользователь':'AI'}</span><div id="${uid}"></div>`;
-                d.appendChild(b); renderContent(m.content, uid);
+                
+                // Добавил роль в само сообщение для лучшей читаемости
+                const roleText = m.role === 'user' ? 'Пользователь:' : 'AI-Ассистент:';
+                
+                b.innerHTML = `<span class="msg-role" style="font-size: 0.8em; opacity: 0.7; display: block; margin-bottom: 5px;">${roleText}</span><div id="${uid}"></div>`;
+                d.appendChild(b); 
+                
+                // Убедимся, что рендеринг происходит в созданном контейнере
+                renderContent(m.content, uid);
             });
             d.scrollTop = d.scrollHeight;
         }
